@@ -3,34 +3,41 @@ from pdb import set_trace as bp
 
 import numpy as np
 import h5py
-# import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from preprocess_data import load_images
 
 
-def load_dataset(test_ratio=0.1):
+def load_dataset():
     full_dataset = load_images()
+    train_x, train_y, test_x, test_y = split_train_test_data(full_dataset)
+    return train_x, train_y, test_x, test_y
+
+
+def split_train_test_data(
+        full_dataset,
+        test_ratio=0.1,
+):
     train, test = [], []
-    for flower in full_dataset:
+    for flower in sorted(full_dataset.keys())[:3]:
         all_images = full_dataset[flower]
         num_images = all_images.shape[0]
 
-        rand_num = np.random.shuffle(np.arange(num_images))
+        rand_num = np.arange(num_images)
         np.random.shuffle(rand_num)
-        _test = full_dataset[flower][rand_num[:int(num_images * test_ratio)]]
-        _train = full_dataset[flower][rand_num[int(num_images * test_ratio):]]
+        _test = np.array(all_images)[rand_num[:int(num_images * test_ratio)]]
+        _train = np.array(all_images)[rand_num[int(num_images * test_ratio):]]
         train.append(_train)
         test.append(_test)
 
     train_x = np.concatenate(train, axis=0)
     test_x = np.concatenate(test, axis=0)
 
-    train_x = np.concatenate([
+    train_y = np.concatenate([
         np.ones([values.shape[0]]) * i
         for i, values in enumerate(train)
     ])
-    train_y = np.concatenate([
+    test_y = np.concatenate([
         np.ones([values.shape[0]]) * i
         for i, values in enumerate(test)
     ])
