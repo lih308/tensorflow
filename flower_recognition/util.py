@@ -3,25 +3,38 @@ from pdb import set_trace as bp
 
 import numpy as np
 import h5py
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import tensorflow as tf
 
+from preprocess_data import load_images
 
-def load_dataset():
-    train_dataset = h5py.File('data/train_signs.h5', "r")
-    train_set_x_orig = np.array(train_dataset["train_set_x"][:])
-    train_set_y_orig = np.array(train_dataset["train_set_y"][:])
 
-    test_dataset = h5py.File('data/test_signs.h5', "r")
-    test_set_x_orig = np.array(test_dataset["test_set_x"][:])
-    test_set_y_orig = np.array(test_dataset["test_set_y"][:])
+def load_dataset(test_ratio=0.1):
+    full_dataset = load_images()
+    train, test = [], []
+    for flower in full_dataset:
+        all_images = full_dataset[flower]
+        num_images = all_images.shape[0]
 
-    classes = np.array(test_dataset["list_classes"][:])
-    
-    train_set_y_orig = train_set_y_orig.reshape((1, train_set_y_orig.shape[0]))
-    test_set_y_orig = test_set_y_orig.reshape((1, test_set_y_orig.shape[0]))
-    
-    return train_set_x_orig, train_set_y_orig, test_set_x_orig, test_set_y_orig, classes
+        rand_num = np.random.shuffle(np.arange(num_images))
+        np.random.shuffle(rand_num)
+        _test = full_dataset[flower][rand_num[:int(num_images * test_ratio)]]
+        _train = full_dataset[flower][rand_num[int(num_images * test_ratio):]]
+        train.append(_train)
+        test.append(_test)
+
+    train_x = np.concatenate(train, axis=0)
+    test_x = np.concatenate(test, axis=0)
+
+    train_x = np.concatenate([
+        np.ones([values.shape[0]]) * i
+        for i, values in enumerate(train)
+    ])
+    train_y = np.concatenate([
+        np.ones([values.shape[0]]) * i
+        for i, values in enumerate(test)
+    ])
+    return train_x, train_y, test_x, test_y
 
 
 def random_mini_batches(

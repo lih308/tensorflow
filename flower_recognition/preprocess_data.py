@@ -52,7 +52,7 @@ def multi_crop(
 
 def save_images(
         data,
-        file_name='flowers.hdf5',
+        file_name='data/flowers.hdf5',
         category='flower',
         mode='a',
 ):
@@ -60,7 +60,7 @@ def save_images(
         f.create_dataset(category, data=data)
 
 
-def load_images(file_name='flowers.hdf5'):
+def load_images(file_name='data/flowers.hdf5'):
     data = h5py.File(file_name, 'r')
     return data
 
