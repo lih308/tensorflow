@@ -48,7 +48,7 @@ def initialize_parameters():
     return parameters
 
                                                                                                                     
-def forward_propagation(X, parameters):
+def forward_propagation(X, parameters, n_y):
     """
     Implements the forward propagation for the model:
     CONV2D -> RELU -> MAXPOOL -> CONV2D -> RELU -> MAXPOOL -> FLATTEN -> FULLYCONNECTED
@@ -73,7 +73,7 @@ def forward_propagation(X, parameters):
     P2 = tf.nn.max_pool(A2, ksize = [1, 4, 4, 1], strides = [1, 4, 4, 1], padding = 'SAME')
     P2 = tf.contrib.layers.flatten(P2)
 
-    Z3 = tf.contrib.layers.fully_connected(P2, 6, activation_fn=None)
+    Z3 = tf.contrib.layers.fully_connected(P2, n_y, activation_fn=None)
     return Z3
 
 
@@ -132,7 +132,7 @@ def model(
     X, Y = create_placeholders(n_H0, n_W0, n_C0, n_y)
     parameters = initialize_parameters()
     
-    Z3 = forward_propagation(X, parameters)
+    Z3 = forward_propagation(X, parameters, n_y)
     cost = compute_cost(Z3, Y)
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
@@ -146,6 +146,7 @@ def model(
             minibatch_cost = .0
             num_minibatches = int(m / minibatch_size)
             seed = seed + 1
+
             minibatches = random_mini_batches(X_train, Y_train, minibatch_size, seed)
             for minibatch in minibatches:
                 (minibatch_X, minibatch_Y) = minibatch
