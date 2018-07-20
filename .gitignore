@@ -4,3 +4,8 @@ tf_env/
 training-data-analyst/
 venvs/
 model/
+data/
+models/
+.ipynb_checkpoints/
+examples/
+__pycache__/
