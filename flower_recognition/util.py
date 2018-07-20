@@ -11,6 +11,8 @@ from preprocess_data import load_images
 def load_dataset():
     full_dataset = load_images()
     train_x, train_y, test_x, test_y = split_train_test_data(full_dataset)
+    train_y = convert_to_one_hot(train_y)
+    test_y = convert_to_one_hot(test_y)
     return train_x, train_y, test_x, test_y
 
 
@@ -19,14 +21,14 @@ def split_train_test_data(
         test_ratio=0.1,
 ):
     train, test = [], []
-    for flower in sorted(full_dataset.keys())[:3]:
+    for flower in sorted(full_dataset.keys()):
         all_images = full_dataset[flower]
         num_images = all_images.shape[0]
 
         rand_num = np.arange(num_images)
         np.random.shuffle(rand_num)
         _test = np.array(all_images)[rand_num[:int(num_images * test_ratio)]]
-        _train = np.array(all_images)[rand_num[int(num_images * test_ratio):]]
+        _train = np.array(all_images)[rand_num[int(num_images * test_ratio):250]]
         train.append(_train)
         test.append(_test)
 
@@ -65,7 +67,7 @@ def random_mini_batches(
     input_size = X.shape[0]
     mini_batches = []
     np.random.seed(seed)
-    
+
     permutation = list(np.random.permutation(input_size))
     shuffled_X = X[permutation,:,:,:]
     shuffled_Y = Y[permutation,:]
@@ -86,8 +88,13 @@ def random_mini_batches(
     return mini_batches
 
 
-def convert_to_one_hot(Y, C):
-    Y = np.eye(C)[Y.reshape(-1)].T
+def convert_to_one_hot(
+        Y,
+        C=None,
+):
+    if C is None:
+        C = np.unique(Y).shape[0]
+    Y = np.eye(C)[Y.astype(int)]
     return Y
 
 
