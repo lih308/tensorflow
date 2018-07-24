@@ -13,6 +13,7 @@ def run():
         Y_train=y_train,
         X_test=x_test,
         Y_test=y_test,
+        num_epochs=100,
     )
 
 

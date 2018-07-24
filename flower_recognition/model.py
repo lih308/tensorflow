@@ -78,8 +78,6 @@ def forward_propagation(X, parameters, n_y):
     Z3 -- the output of the last LINEAR unit
     """
     W1 = parameters['W1']
-    W2 = parameters['W2']
-
     Z1 = tf.nn.conv2d(
         input=X,
         filter=W1,
@@ -98,7 +96,12 @@ def forward_propagation(X, parameters, n_y):
         padding='SAME',
         name='P1',
     )
+    tf.summary.histogram('W1', W1)
+    tf.summary.histogram('Z1', Z1)
+    tf.summary.histogram('A1', A1)
+    tf.summary.histogram('P1', P1)
 
+    W2 = parameters['W2']
     Z2 = tf.nn.conv2d(
         input=P1,
         filter=W2,
@@ -118,12 +121,17 @@ def forward_propagation(X, parameters, n_y):
         name='P2',
     )
     P2 = tf.contrib.layers.flatten(P2)
+    tf.summary.histogram('W2', W2)
+    tf.summary.histogram('Z2', Z2)
+    tf.summary.histogram('A2', A2)
+    tf.summary.histogram('P2', P2)
 
     Z3 = tf.contrib.layers.fully_connected(
         inputs=P2,
         num_outputs=n_y,
         activation_fn=None,
     )
+    tf.summary.histogram('Z3', Z3)
     return Z3
 
 
@@ -138,15 +146,17 @@ def compute_cost(Z3, Y):
     Returns:
     cost - Tensor of the cost function
     """
-    cost = tf.nn.softmax_cross_entropy_with_logits(
+    cost_entropy = tf.nn.softmax_cross_entropy_with_logits(
         logits=Z3,
         labels=Y,
         name='item_cost',
     )
     cost = tf.reduce_mean(
-        input_tensor=cost,
+        input_tensor=cost_entropy,
         name='cost',
     )
+    tf.summary.scalar('cost', cost)
+
     return cost
 
 
@@ -191,6 +201,8 @@ def model(
     
     Z3 = forward_propagation(X, parameters, n_y)
     cost = compute_cost(Z3, Y)
+
+    merged_summary = tf.summary.merge_all()
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     saver = tf.train.Saver()
@@ -198,6 +210,7 @@ def model(
     with tf.Session() as sess:
         sess.run(init)
         ckpt = tf.train.get_checkpoint_state('./model/')
+        writer = tf.summary.FileWriter('./model/tmp/tensorboard/3')
 
         for epoch in range(num_epochs):
             minibatch_cost = .0
@@ -207,7 +220,7 @@ def model(
             minibatches = random_mini_batches(X_train, Y_train, minibatch_size, seed)
             for minibatch in minibatches:
                 (minibatch_X, minibatch_Y) = minibatch
-                _ , temp_cost = sess.run(
+                _, temp_cost = sess.run(
                     [optimizer, cost],
                     feed_dict={
                         X: minibatch_X,
@@ -219,6 +232,14 @@ def model(
             if print_cost == True and epoch % 5 == 0:
                 print ("Cost after epoch %i: %f" % (epoch, minibatch_cost))
                 saver.save(sess, './model/' + 'model.ckpt', global_step=epoch+1)
+                _summary = sess.run(
+                    merged_summary,
+                    feed_dict={
+                        X: minibatch_X,
+                        Y: minibatch_Y,
+                    },
+                )
+                writer.add_summary(_summary, epoch)
             if print_cost == True and epoch % 1 == 0:
                 costs.append(minibatch_cost)
         
@@ -228,17 +249,19 @@ def model(
         plt.title("Learning rate =" + str(learning_rate))
         plt.show()
 
+        writer.add_graph(sess.graph)
+
         predict_op = tf.argmax(Z3, 1)
         correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
-        
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print(accuracy)
-        train_accuracy = accuracy.eval({X: X_train, Y: Y_train})
-        test_accuracy = accuracy.eval({X: X_test, Y: Y_test})
-        print("Train Accuracy:", train_accuracy)
-        print("Test Accuracy:", test_accuracy)
-                
-    return train_accuracy, test_accuracy, parameters
+
+    #     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+    #     print(accuracy)
+    #     train_accuracy = accuracy.eval({X: X_train, Y: Y_train})
+    #     test_accuracy = accuracy.eval({X: X_test, Y: Y_test})
+    #     print("Train Accuracy:", train_accuracy)
+    #     print("Test Accuracy:", test_accuracy)
+
+    # return train_accuracy, test_accuracy, parameters
 
 
 def predict(X, parameters):
