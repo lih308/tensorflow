@@ -1,4 +1,5 @@
 import os
+from pdb import set_trace as bp
 
 import tensorflow as tf
 
@@ -87,7 +88,6 @@ dropout = 0.75 # Dropout, probability to keep units
 
 # Build the data input
 X, Y = read_images(DATASET_PATH, MODE, batch_size)
-
 
 # Create model
 def conv_net(x, n_classes, dropout, reuse, is_training):

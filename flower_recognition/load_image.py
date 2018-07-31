@@ -18,7 +18,7 @@ def read_labeled_image_list(
     Args:
         directory: location where pictures are stored
     Returns:
-       List with all filenames in directory
+       List with all filenames in directory and list with labels for files
     """
     file_names = []
     labels = []
@@ -27,7 +27,7 @@ def read_labeled_image_list(
         sub_directory = directory + label + '/'
         images = os.listdir(sub_directory)
         images = [
-            sub_directory + file_name for file_name in images[:10]
+            sub_directory + file_name for file_name in images
             if file_name[-4:] == '.jpg'
         ]
         file_names += images
@@ -49,10 +49,20 @@ def read_images_from_disk(file_name, label):
     return example, label
 
 
-def run(
+def load_images(
+        directory='./data/flowers/',
         num_epochs=2,
-        batch_size=16,
+        batch_size=128,
 ):
+    """ Read all files in a directory
+    Args:
+        directory: location where pictures are stored
+        num_epochs: number of epochs
+        batch_size: batch size
+
+    Returns:
+        Two tensors: one for image file names, one for image labels
+    """
     image_list, label_list = read_labeled_image_list()
     images = tf.convert_to_tensor(image_list, dtype=tf.string)
     labels = tf.convert_to_tensor(label_list, dtype=tf.string)
@@ -62,16 +72,19 @@ def run(
         num_epochs=num_epochs,
     )
     image, label = read_images_from_disk(image, label)
-    bp()
-
-    # Optional Preprocessing or Data Augmentation
-    # tf.image implements most of the standard image augmentation
-    # image = preprocess_image(image)
-    # label = preprocess_label(label)
-
-    # Optional Image and Label Batching
     image_batch, label_batch = tf.train.batch(
         [image, label],
+        batch_size=batch_size,
+    )
+    return image_batch, label_batch
+
+    
+def run(
+        num_epochs=2,
+        batch_size=16,
+):
+    image_batch, label_batch = load_images(
+        num_epochs=num_epochs,
         batch_size=batch_size,
     )
     init_op = tf.group(
@@ -82,8 +95,6 @@ def run(
     with tf.Session() as sess:
         sess.run(init_op)
         tf.train.start_queue_runners()
-        bp()
-        results = sess.run(image_batch)
 
  
 if __name__ == "__main__":
