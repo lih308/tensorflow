@@ -1,5 +1,4 @@
 import os
-from datetime import datetime as dt
 from pdb import set_trace as bp
 
 import numpy as np
@@ -9,6 +8,38 @@ import tensorflow as tf
 IMAGE_SIZE = 256
 IMG_WIDTH = 64
 IMG_HEIGHT = 64
+
+
+def load_images(
+        directory='./data/flowers/',
+        num_epochs=2,
+        batch_size=128,
+):
+    """ Read all files in a directory
+    Args:
+        directory: location where pictures are stored
+        num_epochs: number of epochs
+        batch_size: batch size
+
+    Returns:
+        Two tensors: one for image file names, one for image labels
+    """
+    image_list, label_list = read_labeled_image_list()
+    train_image, train_label, test_image, test_label = split_train_and_test(
+        image_list,
+        label_list,
+    )
+    train_image_batch, train_label_batch = process_image(
+        train_image,
+        train_label,
+        num_epochs=num_epochs,
+        batch_size=batch_size,
+    )
+    test_image, test_label = process_image(
+        test_image,
+        test_label,
+    )
+    return train_image_batch, train_label_batch, test_image, test_label
 
 
 def read_labeled_image_list(
@@ -33,9 +64,62 @@ def read_labeled_image_list(
         file_names += images
         labels += [label] * len(images)
 
-    return file_names, labels
+    return np.array(file_names), np.array(labels)
 
 
+def split_train_and_test(
+        image_list,
+        label_list,
+        train_ratio=0.9,
+):
+    assert len(image_list) == len(label_list)
+    num = len(image_list)
+    rand_num = np.arange(num)
+    np.random.shuffle(rand_num)
+
+    train_num = int(num * train_ratio)
+    train_image = image_list[rand_num[: train_num]]
+    train_label = label_list[rand_num[: train_num]]
+    test_image = image_list[rand_num[train_num:]]
+    test_label = label_list[rand_num[train_num:]]
+
+    return train_image, train_label, test_image, test_label
+
+
+def process_image(
+        images,
+        labels,
+        num_epochs=1,
+        batch_size=None,
+):
+    """ Process image/label list
+
+    Args:
+        images: list of images files
+        labels: list of corresponding labels for images
+
+    Returns:
+        image: tensor of image data
+        label: tensor of label data
+    """
+    images = tf.convert_to_tensor(images, dtype=tf.string)
+    labels = tf.convert_to_tensor(labels, dtype=tf.string)
+
+    image, label = tf.train.slice_input_producer(
+        tensor_list=[images, labels],
+        num_epochs=num_epochs,
+    )
+    image, label = read_images_from_disk(image, label)
+    if num_epochs > 1:
+        image_batch, label_batch = tf.train.batch(
+            [image, label],
+            batch_size=batch_size,
+        )
+        return image_batch, label_batch
+    else:
+        return image, label
+    
+    
 def read_images_from_disk(file_name, label):
     """Consumes a single filename and label as a ' '-delimited string.
     Args:
@@ -49,44 +133,8 @@ def read_images_from_disk(file_name, label):
     return example, label
 
 
-def load_images(
-        directory='./data/flowers/',
-        num_epochs=2,
-        batch_size=128,
-):
-    """ Read all files in a directory
-    Args:
-        directory: location where pictures are stored
-        num_epochs: number of epochs
-        batch_size: batch size
-
-    Returns:
-        Two tensors: one for image file names, one for image labels
-    """
-    image_list, label_list = read_labeled_image_list()
-    images = tf.convert_to_tensor(image_list, dtype=tf.string)
-    labels = tf.convert_to_tensor(label_list, dtype=tf.string)
-
-    image, label = tf.train.slice_input_producer(
-        tensor_list=[images, labels],
-        num_epochs=num_epochs,
-    )
-    image, label = read_images_from_disk(image, label)
-    image_batch, label_batch = tf.train.batch(
-        [image, label],
-        batch_size=batch_size,
-    )
-    return image_batch, label_batch
-
-    
-def run(
-        num_epochs=2,
-        batch_size=16,
-):
-    image_batch, label_batch = load_images(
-        num_epochs=num_epochs,
-        batch_size=batch_size,
-    )
+def run():
+    train_image_batch, train_label_batch, test_image, test_label = load_images()
     init_op = tf.group(
         tf.local_variables_initializer(),
         tf.global_variables_initializer(),
@@ -96,6 +144,9 @@ def run(
         sess.run(init_op)
         tf.train.start_queue_runners()
 
- 
+        bp()
+        pass
+
+
 if __name__ == "__main__":
     run()
