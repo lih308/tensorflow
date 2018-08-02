@@ -5,9 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-IMAGE_SIZE = 256
-IMG_WIDTH = 64
-IMG_HEIGHT = 64
+IMG_WIDTH = 256
+IMG_HEIGHT = 256
 
 
 def load_images(
@@ -38,6 +37,7 @@ def load_images(
     test_image, test_label = process_image(
         test_image,
         test_label,
+        batch_size=1,
     )
     return train_image_batch, train_label_batch, test_image, test_label
 
@@ -54,8 +54,8 @@ def read_labeled_image_list(
     file_names = []
     labels = []
 
-    for label in os.listdir(directory):
-        sub_directory = directory + label + '/'
+    for label, flower_name in enumerate(sorted(os.listdir(directory))):
+        sub_directory = directory + flower_name + '/'
         images = os.listdir(sub_directory)
         images = [
             sub_directory + file_name for file_name in images
@@ -63,8 +63,7 @@ def read_labeled_image_list(
         ]
         file_names += images
         labels += [label] * len(images)
-
-    return np.array(file_names), np.array(labels)
+    return np.array(file_names), convert_to_one_hot(np.array(labels))
 
 
 def split_train_and_test(
@@ -103,21 +102,18 @@ def process_image(
         label: tensor of label data
     """
     images = tf.convert_to_tensor(images, dtype=tf.string)
-    labels = tf.convert_to_tensor(labels, dtype=tf.string)
+    labels = tf.convert_to_tensor(labels, dtype=tf.float32)
 
     image, label = tf.train.slice_input_producer(
         tensor_list=[images, labels],
         num_epochs=num_epochs,
     )
     image, label = read_images_from_disk(image, label)
-    if num_epochs > 1:
-        image_batch, label_batch = tf.train.batch(
-            [image, label],
-            batch_size=batch_size,
-        )
-        return image_batch, label_batch
-    else:
-        return image, label
+    image_batch, label_batch = tf.train.batch(
+        [image, label],
+        batch_size=batch_size,
+    )
+    return image_batch, label_batch
     
     
 def read_images_from_disk(file_name, label):
@@ -131,6 +127,16 @@ def read_images_from_disk(file_name, label):
     example = tf.image.decode_jpeg(file_contents, channels=3)
     example = tf.image.resize_images(example, [IMG_HEIGHT, IMG_WIDTH])
     return example, label
+
+
+def convert_to_one_hot(
+        Y,
+        C=None,
+):
+    if C is None:
+        C = np.unique(Y).shape[0]
+    Y = np.eye(C)[Y.astype(int)]
+    return Y
 
 
 def run():

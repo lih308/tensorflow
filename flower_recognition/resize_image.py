@@ -10,13 +10,13 @@ def test():
     sess = tf.InteractiveSession()
 
     directory = './data/flowers/tulip/'
-    tulip_file = directory + os.listdir(directory)[3]
+    tulip_file = directory + os.listdir(directory)[4]
     
     tulip_tensor = tf.convert_to_tensor(tulip_file, dtype=tf.string)
     tulip_image = tf.read_file(tulip_file)
     tulip_data = tf.image.decode_jpeg(tulip_image, channels=3)
     tulip_resized = tf.image.resize_images(
-        tulip_resized,
+        tulip_data,
         size=[128, 128],
     )
     return tulip_data.eval(), tulip_resized.eval()

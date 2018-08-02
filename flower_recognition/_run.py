@@ -3,7 +3,7 @@ from pdb import set_trace as bp
 import numpy as np
 
 from model import *
-from util import *
+from _util import *
 
 
 def run():
