@@ -28,18 +28,18 @@ def load_images(
         image_list,
         label_list,
     )
-    train_image_batch, train_label_batch = process_image(
+    train_data = process_data(
         train_image,
         train_label,
         num_epochs=num_epochs,
         batch_size=batch_size,
     )
-    test_image, test_label = process_image(
+    test_data = process_data(
         test_image,
         test_label,
         batch_size=1,
     )
-    return train_image_batch, train_label_batch, test_image, test_label
+    return train_data, test_data
 
 
 def read_labeled_image_list(
@@ -85,11 +85,11 @@ def split_train_and_test(
     return train_image, train_label, test_image, test_label
 
 
-def process_image(
+def process_data(
         images,
         labels,
         num_epochs=1,
-        batch_size=None,
+        batch_size=1,
 ):
     """ Process image/label list
 
@@ -101,22 +101,22 @@ def process_image(
         image: tensor of image data
         label: tensor of label data
     """
-    images = tf.convert_to_tensor(images, dtype=tf.string)
+    image_paths = tf.convert_to_tensor(images, dtype=tf.string)
     labels = tf.convert_to_tensor(labels, dtype=tf.int16)
 
-    image, label = tf.train.slice_input_producer(
-        tensor_list=[images, labels],
-        num_epochs=num_epochs,
+    images = tf.map_fn(
+        lambda image: read_images_from_disk(image),
+        image_paths,
     )
-    image, label = read_images_from_disk(image, label)
-    image_batch, label_batch = tf.train.batch(
-        [image, label],
-        batch_size=batch_size,
+
+    data_set = tf.data.Dataset.from_tensor_slices(
+        (images, labels),
     )
-    return image_batch, label_batch
+    data_set = data_set.repeat(num_epochs).batch(batch_size)
+    return data_set
+
     
-    
-def read_images_from_disk(file_name, label):
+def read_images_from_disk(file_name):
     """Consumes a single filename and label as a ' '-delimited string.
     Args:
       filename_and_label_tensor: A scalar string tensor.
@@ -124,9 +124,9 @@ def read_images_from_disk(file_name, label):
       Two tensors: the decoded image, and the string label.
     """
     file_contents = tf.read_file(file_name)
-    example = tf.image.decode_jpeg(file_contents, channels=3)
-    example = tf.image.resize_images(example, [IMG_HEIGHT, IMG_WIDTH])
-    return example, label
+    image = tf.image.decode_jpeg(file_contents, channels=3)
+    image = tf.image.resize_images(image, [IMG_HEIGHT, IMG_WIDTH])
+    return image
 
 
 def convert_to_one_hot(
@@ -140,22 +140,17 @@ def convert_to_one_hot(
 
 
 def run():
-    train_image_batch, train_label_batch, test_image, test_label = load_images()
+    train_data, test_data = load_images()
     init_op = tf.group(
         tf.local_variables_initializer(),
         tf.global_variables_initializer(),
     )
+    iter = train_data.make_initializable_iterator()
+    image, label = iter.get_next()
 
     with tf.Session() as sess:
         sess.run(init_op)
-        coord = tf.train.Coordinator()
-        tf.train.start_queue_runners(
-            sess=sess,
-            coord=coord,
-        )
-
-        bp()
-        pass
+        sess.run(iter.initializer)
 
 
 if __name__ == "__main__":

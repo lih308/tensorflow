@@ -160,13 +160,9 @@ def compute_cost(Z3, Y):
 
 
 def model(
-        X_train,
-        Y_train,
-        X_test,
-        Y_test,
+        train_data,
+        test_data,
         learning_rate=0.009,
-        num_epochs=100,
-        minibatch_size=64,
         print_cost=True,
 ):
     """
@@ -190,87 +186,16 @@ def model(
     """
     
     # ops.reset_default_graph()
-    seed = 3
-    (m, n_H0, n_W0, n_C0) = X_train.shape.as_list() if isinstance(X_train, tf.Tensor) else X_train.shape
-    n_y = Y_train.shape.as_list()[1] if isinstance(Y_train, tf.Tensor) else Y_train.shape[1]
-    costs = []
-    
-    X, Y = create_placeholders(n_H0, n_W0, n_C0, n_y)
-    parameters = initialize_parameters()
-    Z3 = forward_propagation(X, parameters, n_y)
-    cost = compute_cost(Z3, Y)
 
     merged_summary = tf.summary.merge_all()
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-
-    saver = tf.train.Saver()
     init_op = tf.group(
         tf.local_variables_initializer(),
         tf.global_variables_initializer(),
     )
-    coord = tf.train.Coordinator()
+    iter = train_data.make_initializable_iterator()
+    image, label = iter.get_next()
+
     with tf.Session() as sess:
         sess.run(init_op)
-        threads = tf.train.start_queue_runners(
-            sess=sess,
-            coord=coord,
-        )
-        ckpt = tf.train.get_checkpoint_state('./model/')
-        writer = tf.summary.FileWriter('./model/tmp/tensorboard/3')
+        sess.run(iter.initializer)
 
-        try:
-            count = 0
-            while not coord.should_stop():
-                _cost = X_train.eval(session=sess).mean()
-                # _, _cost = sess.run(
-                #     [optimizer, cost],
-                #     feed_dict={
-                #         X: X_train.eval(session=sess),
-                #         Y: Y_train.eval(session=sess),
-                #     },
-                # )
-                count += 1
-                if count % 1 == 0:
-                    print(count, 'th minibatch with cost', _cost)
-        except:
-            coord.request_stop()
-            coord.join(threads)
-
-        writer.add_graph(sess.graph)
-        predict_op = tf.argmax(Z3, 1)
-        correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
-
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print(accuracy)
-        train_accuracy = accuracy.eval({
-            X: X_train.eval(session=sess),
-            Y: Y_train.eval(session=sess),
-        })
-        test_accuracy = accuracy.eval({
-            X: X_test.eval(session=sess),
-            Y: Y_test.eval(session=sess),
-        })
-        print("Train Accuracy:", train_accuracy)
-        print("Test Accuracy:", test_accuracy)
-
-    return train_accuracy, test_accuracy, parameters
-
-
-def predict(X, parameters):
-    params = {
-        key: tf.convert_to_tensor(value)
-        for key, value in parameters.items()
-    }
-
-    # (m, n_H0, n_W0, n_C0) = X.shape             
-    x = tf.placeholder("float", [1, 64, 64, 3])  # [None, n_H0, n_W0, n_C0])
-    
-    z3 = forward_propagation(x, params)
-    # p = tf.argmax(z3)
-    
-    with tf.Session() as sess:
-        prediction = sess.run(
-            z3, # p,
-            feed_dict = {x: X},
-        )
-    return prediction
