@@ -208,19 +208,33 @@ def model(
         tf.local_variables_initializer(),
         tf.global_variables_initializer(),
     )
+    coord = tf.train.Coordinator()
     with tf.Session() as sess:
         sess.run(init_op)
-        tf.train.start_queue_runners()
+        threads = tf.train.start_queue_runners(
+            sess=sess,
+            coord=coord,
+        )
         ckpt = tf.train.get_checkpoint_state('./model/')
         writer = tf.summary.FileWriter('./model/tmp/tensorboard/3')
 
-        _, cost = sess.run(
-            [optimizer, cost],
-            feed_dict={
-                X: X_train.eval(session=sess),
-                Y: Y_train.eval(session=sess),
-            },
-        )
+        try:
+            count = 0
+            while not coord.should_stop():
+                _cost = X_train.eval(session=sess).mean()
+                # _, _cost = sess.run(
+                #     [optimizer, cost],
+                #     feed_dict={
+                #         X: X_train.eval(session=sess),
+                #         Y: Y_train.eval(session=sess),
+                #     },
+                # )
+                count += 1
+                if count % 1 == 0:
+                    print(count, 'th minibatch with cost', _cost)
+        except:
+            coord.request_stop()
+            coord.join(threads)
 
         writer.add_graph(sess.graph)
         predict_op = tf.argmax(Z3, 1)

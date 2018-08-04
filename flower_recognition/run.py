@@ -9,7 +9,7 @@ from load_images import load_images
 
 def run():
     ops.reset_default_graph()
-    train_image_batch, train_label_batch, test_image, test_label = load_images()
+    train_image_batch, train_label_batch, test_image, test_label = load_images(num_epochs=1)
     results = model(
         X_train=train_image_batch,
         Y_train=train_label_batch,

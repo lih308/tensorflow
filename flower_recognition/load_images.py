@@ -59,7 +59,7 @@ def read_labeled_image_list(
         images = os.listdir(sub_directory)
         images = [
             sub_directory + file_name for file_name in images
-            if file_name[-4:] == '.jpg'
+            if file_name.endswith('.jpg')
         ]
         file_names += images
         labels += [label] * len(images)
@@ -102,7 +102,7 @@ def process_image(
         label: tensor of label data
     """
     images = tf.convert_to_tensor(images, dtype=tf.string)
-    labels = tf.convert_to_tensor(labels, dtype=tf.float32)
+    labels = tf.convert_to_tensor(labels, dtype=tf.int16)
 
     image, label = tf.train.slice_input_producer(
         tensor_list=[images, labels],
@@ -148,7 +148,11 @@ def run():
 
     with tf.Session() as sess:
         sess.run(init_op)
-        tf.train.start_queue_runners()
+        coord = tf.train.Coordinator()
+        tf.train.start_queue_runners(
+            sess=sess,
+            coord=coord,
+        )
 
         bp()
         pass
