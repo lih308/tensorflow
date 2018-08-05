@@ -66,9 +66,9 @@ def train_and_test(
         tf.global_variables_initializer(),
     )
 
+    train_data = train_data.repeat(num_epochs)
     train_data = train_data.shuffle(buffer_size)
     train_data = train_data.batch(batch_size)
-    train_data = train_data.repeat(num_epochs)
 
     iterator = train_data.make_initializable_iterator()
     images, labels = iterator.get_next()
