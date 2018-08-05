@@ -107,12 +107,12 @@ def process_data(
     images = tf.map_fn(
         lambda image: read_images_from_disk(image),
         image_paths,
+        dtype=tf.float32,
     )
 
     data_set = tf.data.Dataset.from_tensor_slices(
         (images, labels),
     )
-    data_set = data_set.repeat(num_epochs).batch(batch_size)
     return data_set
 
     
@@ -130,28 +130,14 @@ def read_images_from_disk(file_name):
 
 
 def convert_to_one_hot(
-        Y,
-        C=None,
+        labels,
+        num_classes=None,
 ):
-    if C is None:
-        C = np.unique(Y).shape[0]
-    Y = np.eye(C)[Y.astype(int)]
-    return Y
-
-
-def run():
-    train_data, test_data = load_images()
-    init_op = tf.group(
-        tf.local_variables_initializer(),
-        tf.global_variables_initializer(),
-    )
-    iter = train_data.make_initializable_iterator()
-    image, label = iter.get_next()
-
-    with tf.Session() as sess:
-        sess.run(init_op)
-        sess.run(iter.initializer)
+    if num_classes is None:
+        num_classes = np.unique(labels).shape[0]
+    labels = np.eye(num_classes)[labels.astype(int)]
+    return labels
 
 
 if __name__ == "__main__":
-    run()
+    pass
