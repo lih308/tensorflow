@@ -66,28 +66,32 @@ def train_and_test(
         tf.global_variables_initializer(),
     )
 
-    train_data = train_data.repeat(num_epochs)
-    train_data = train_data.shuffle(buffer_size)
-    train_data = train_data.batch(batch_size)
-
-    iterator = train_data.make_initializable_iterator()
-    images, labels = iterator.get_next()
 
     with tf.Session() as sess:
         sess.run(init_op)
         sess.run(iterator.initializer)
-        for count in range(num_epochs):
-            fit = flower_model.fit(
-                x=images.eval(),
-                y=labels.eval(),
-                # epochs=num_epochs,
-                # batch_size=batch_size,
-            )
+
+        for num_epoch in range(num_epoch):
+            # train_data = train_data.repeat(num_epochs)
+            train_data = train_data.shuffle(buffer_size)
+            train_data = train_data.batch(batch_size)
+            iterator = train_data.make_initializable_iterator()
+
+            for num_batch in range(something_number):
+                images, labels = iterator.get_next()
+
+                fit = flower_model.fit(
+                    x=images,  # .eval(),
+                    y=labels,  # .eval(),
+                    # epochs=num_epochs,
+                    # batch_size=batch_size,
+                )
     #  1. It seems I have to pass in data to flower_model.fit, not tensors. So I used .eval for tensors. Is this the right way?
     #  2. I want to run for several epochs, and with mini batches.
     #     But right now, the code is runnig num_epoch iteration, with batch_size for each epoch.
     #     How to properly iterate through all images with minibatches?
-
+    # https://cedar.buffalo.edu/~srihari/CSE676/1.4.2%20Fizzbuzz.pdf
+    # http://adventuresinmachinelearning.com/keras-lstm-tutorial/
 
 if __name__ == '__main__':
     pass
